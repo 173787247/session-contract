@@ -1,12 +1,61 @@
 import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { join, resolve } from "node:path";
+import { delimiter, join, resolve } from "node:path";
 import { CliError } from "./errors.js";
 
 export function defaultPackDir(now = new Date(), rand = randomBytes(2).toString("hex")) {
   const utc = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   return join(".session-contract", "packs", `${utc}-${rand}`);
+}
+
+/**
+ * Windows `spawnSync("claude")` is ENOENT; the npm shim is `claude.cmd`.
+ * Run it via `cmd.exe /d /s /c` so the batch's exit code and quoted argv survive.
+ * @param {string} bin
+ * @param {NodeJS.ProcessEnv} [env]
+ */
+export function resolveClaudeBin(bin, env = process.env) {
+  if (bin !== "claude" && existsSync(bin)) return bin;
+  if (bin !== "claude") return bin;
+  const pathEnv = env.PATH || env.Path || "";
+  const names = process.platform === "win32" ? ["claude.cmd", "claude.exe", "claude"] : ["claude"];
+  for (const dir of pathEnv.split(delimiter)) {
+    if (!dir) continue;
+    for (const name of names) {
+      const p = join(dir, name);
+      if (existsSync(p)) return p;
+    }
+  }
+  return bin;
+}
+
+/**
+ * cmd.exe quoting: double `%` (even inside quotes), then wrap and double `"`.
+ * @param {string} s
+ */
+export function cmdQuote(s) {
+  const t = String(s).replaceAll("%", "%%");
+  if (t.length === 0) return '""';
+  if (!/[\s"&<>|^()]/.test(t)) return t;
+  return `"${t.replaceAll('"', '""')}"`;
+}
+
+/**
+ * @param {string} bin
+ * @param {string[]} args
+ * @param {NodeJS.ProcessEnv} env
+ */
+export function claudeSpawnOpts(bin, args, env) {
+  const winShim = process.platform === "win32" && !/\.exe$/i.test(bin);
+  if (!winShim) return { bin, args, opts: { env, stdio: "inherit", shell: false } };
+  const comspec = env.ComSpec || env.COMSPEC || "cmd.exe";
+  const cmdline = [cmdQuote(bin), ...args.map(cmdQuote)].join(" ");
+  return {
+    bin: comspec,
+    args: ["/d", "/s", "/c", cmdline],
+    opts: { env, stdio: "inherit", shell: false, windowsVerbatimArguments: true },
+  };
 }
 
 /**
@@ -63,9 +112,10 @@ export function runCcRun(argv, io) {
   const prepared = prepareCcRun({ contract, pack, claudeArgs });
   io.stderr.write(`pack=${prepared.pack}\n`);
   const env = { ...(io.env ?? process.env), SESSION_CONTRACT_PACK: prepared.pack };
-  const bin = env.SESSION_CONTRACT_CLAUDE || "claude";
+  const bin = resolveClaudeBin(env.SESSION_CONTRACT_CLAUDE || "claude", env);
   const spawn = io.spawn ?? spawnSync;
-  const result = spawn(bin, claudeArgs, { env, stdio: "inherit", shell: false });
+  const launched = claudeSpawnOpts(bin, claudeArgs, env);
+  const result = spawn(launched.bin, launched.args, launched.opts);
   if (result.error) throw new CliError(2, `cannot exec ${bin}: ${result.error.message}`);
   return typeof result.status === "number" ? result.status : 1;
 }

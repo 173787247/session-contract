@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { plantStaleLock } from "../src/cc-lock.js";
 import { mergeSettings, hooksFragment } from "../src/cc-init.js";
 import { digestBody, resultSha256 } from "../src/cc-map.js";
-import { defaultPackDir } from "../src/cc-run.js";
+import { claudeSpawnOpts, cmdQuote, defaultPackDir, resolveClaudeBin } from "../src/cc-run.js";
 import { healTornNdjson } from "../src/cc-writer.js";
 import { parseSidecar } from "../src/sidecar.js";
 import { sha256hex } from "../src/hash.js";
@@ -340,6 +340,43 @@ describe("cc-run", () => {
     const now = new Date("2026-08-20T04:17:09.123Z");
     const dir = defaultPackDir(now, "ab0f");
     assert.match(dir.replaceAll("\\", "/"), /\.session-contract\/packs\/20260820T041709Z-ab0f$/);
+  });
+
+  it("cmdQuote preserves spaces and inner quotes for cmd.exe", () => {
+    assert.equal(cmdQuote("hello world"), `"hello world"`);
+    assert.equal(cmdQuote('say "hi"'), `"say ""hi"""`);
+    assert.equal(cmdQuote("100%"), "100%%");
+  });
+
+  it("resolves the Windows npm shim named claude.cmd", async () => {
+    const dir = await tempDir();
+    const shim = join(dir, "claude.cmd");
+    writeFileSync(shim, "@echo off\n");
+    const resolved = resolveClaudeBin("claude", { PATH: dir, Path: dir });
+    if (process.platform === "win32") {
+      assert.equal(resolved, shim);
+      const launched = claudeSpawnOpts(resolved, ["-p", "hello world"], { ComSpec: "cmd.exe" });
+      assert.equal(launched.opts.shell, false);
+      assert.equal(launched.opts.windowsVerbatimArguments, true);
+      assert.deepEqual(launched.args.slice(0, 3), ["/d", "/s", "/c"]);
+      assert.match(launched.args[3], /"hello world"/);
+    }
+    assert.equal(claudeSpawnOpts(process.execPath, [], {}).opts.shell, false);
+  });
+
+  it("Windows .cmd shim: exit code 7 and a spaced argv survive cmd.exe", { skip: process.platform !== "win32" }, async () => {
+    const cwd = await tempDir();
+    const contract = join(cwd, "c.md");
+    writeFileSync(contract, MINIMAL_CONTRACT);
+    const shim = join(cwd, "claude.cmd");
+    writeFileSync(shim, "@echo off\r\necho ARG1=%1\r\nexit /b 7\r\n");
+    const pack = join(cwd, "pack");
+    const r = run(["cc-run", "--contract", contract, "--pack", pack, "--", "hello world"], {
+      cwd,
+      env: { SESSION_CONTRACT_CLAUDE: shim },
+    });
+    assert.equal(r.status, 7, r.stderr);
+    assert.match(r.stdout, /hello world/);
   });
 });
 
