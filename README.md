@@ -73,7 +73,7 @@ session-contract cc-run --contract contract.md
 session-contract check <that-pack>
 ```
 
-`--write user` merges into `~/.claude/settings.json`. `--print` is the default so the tool does not edit your config unless you opt in. Default `cc-init` emits the **core** hook set only (a `PermissionDenied` key on Claude Code 2.1.87 zeroes every matcher). Gitignore `.session-contract/` (live packs). A kill mid-session leaves no `end` → `check` writes `incomplete.truncated`. Process contract: `spec/0.1-cc-hooks.md`.
+`--write user` merges into `~/.claude/settings.json`. `--print` is the default so the tool does not edit your config unless you opt in. Default `cc-init` emits the **core** hook set only (a `PermissionDenied` key on Claude Code 2.1.87 zeroes every matcher). Gitignore `.session-contract/` (live packs). A kill mid-session leaves no `end` → `check` writes `incomplete.truncated`. Process contract: `spec/0.1-cc-hooks.md`. Live path measured: Linux claude-code 2.1.237, `cc-init` default (no `--full`), `cc-run`, `check`.
 
 ## Status
 
