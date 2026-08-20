@@ -9,6 +9,15 @@ export function sessionContractBin() {
   return fileURLToPath(new URL("../bin/session-contract.js", import.meta.url));
 }
 
+/**
+ * D1 shell form. Native path, double-quoted. No $VAR, &&, or pipes.
+ * @param {string} bin
+ * @param {string} eventName
+ */
+export function hookCommand(bin, eventName) {
+  return `node "${bin}" cc-hook ${eventName}`;
+}
+
 export function hooksFragment() {
   const bin = sessionContractBin();
   /** @type {Record<string, unknown>} */
@@ -17,17 +26,30 @@ export function hooksFragment() {
     hooks[ev] = [
       {
         matcher: "",
-        hooks: [{ type: "command", command: "node", args: [bin, "cc-hook", ev] }],
+        hooks: [{ type: "command", command: hookCommand(bin, ev) }],
       },
     ];
   }
   return { hooks };
 }
 
-function isOurs(entry, eventName) {
+function hookList(entry) {
   const hooks = entry && typeof entry === "object" ? /** @type {Record<string, unknown>} */ (entry).hooks : null;
-  if (!Array.isArray(hooks)) return false;
-  return hooks.some((h) => {
+  return Array.isArray(hooks) ? hooks : [];
+}
+
+function isShellOurs(entry, eventName) {
+  const needle = `cc-hook ${eventName}`;
+  return hookList(entry).some((h) => {
+    if (!h || typeof h !== "object") return false;
+    const cmd = /** @type {Record<string, unknown>} */ (h).command;
+    return typeof cmd === "string" && cmd.includes(needle);
+  });
+}
+
+function isLegacyArgsOurs(entry, eventName) {
+  if (isShellOurs(entry, eventName)) return false;
+  return hookList(entry).some((h) => {
     if (!h || typeof h !== "object") return false;
     const args = /** @type {Record<string, unknown>} */ (h).args;
     return Array.isArray(args) && args.includes("cc-hook") && args.includes(eventName);
@@ -47,10 +69,11 @@ export function mergeSettings(existing, fragment) {
   const hooks = { ...prevHooks };
   for (const ev of CC_EVENTS) {
     const list = Array.isArray(hooks[ev]) ? [.../** @type {unknown[]} */ (hooks[ev])] : [];
-    if (!list.some((entry) => isOurs(entry, ev))) {
-      list.push(fragment.hooks[ev][0]);
+    const upgraded = list.filter((entry) => !isLegacyArgsOurs(entry, ev));
+    if (!upgraded.some((entry) => isShellOurs(entry, ev))) {
+      upgraded.push(fragment.hooks[ev][0]);
     }
-    hooks[ev] = list;
+    hooks[ev] = upgraded;
   }
   out.hooks = hooks;
   return out;

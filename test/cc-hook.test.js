@@ -264,7 +264,7 @@ describe("cc-hook D9", () => {
 });
 
 describe("cc-init", () => {
-  it("9. --print JSON has seven events, node+abs bin, no Stop", () => {
+  it("9. --print JSON has seven events, shell command with cc-hook <Event>, no Stop", () => {
     const r = run(["cc-init", "--print"]);
     assert.equal(r.status, 0, r.stderr);
     const json = JSON.parse(r.stdout);
@@ -275,10 +275,13 @@ describe("cc-init", () => {
       const entry = json.hooks[ev][0];
       assert.equal(entry.matcher, "");
       const h = entry.hooks[0];
-      assert.equal(h.command, "node");
-      assert.equal(h.args[0], resolve(bin));
-      assert.equal(h.args[1], "cc-hook");
-      assert.equal(h.args[2], ev);
+      assert.equal(h.type, "command");
+      assert.equal(h.args, undefined);
+      assert.equal(h.shell, undefined);
+      assert.equal(typeof h.command, "string");
+      assert.match(h.command, new RegExp(`cc-hook ${ev}$`));
+      assert.match(h.command, /^node "/);
+      assert.ok(h.command.includes(resolve(bin)));
     }
   });
 
@@ -309,6 +312,25 @@ describe("cc-init", () => {
     const mergedAgain = mergeSettings(settings, hooksFragment());
     assert.equal(mergedAgain.hooks.PreToolUse.length, 2);
     assert.equal(mergedAgain.hooks.SessionStart.length, 1);
+  });
+
+  it("merge replaces a legacy args-form cc-hook entry", () => {
+    const bin = resolve(join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "session-contract.js"));
+    const existing = {
+      hooks: {
+        SessionStart: [
+          {
+            matcher: "",
+            hooks: [{ type: "command", command: "node", args: [bin, "cc-hook", "SessionStart"] }],
+          },
+        ],
+      },
+    };
+    const merged = mergeSettings(existing, hooksFragment());
+    assert.equal(merged.hooks.SessionStart.length, 1);
+    const cmd = merged.hooks.SessionStart[0].hooks[0].command;
+    assert.equal(merged.hooks.SessionStart[0].hooks[0].args, undefined);
+    assert.match(cmd, /cc-hook SessionStart$/);
   });
 });
 
