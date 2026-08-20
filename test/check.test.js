@@ -58,6 +58,19 @@ describe("check", () => {
     assert.doesNotMatch(v, /incomplete\.truncated/);
   });
 
+  it("StopFailure-shaped pack: start then end error, no tools → incomplete.goal", async () => {
+    const dir = await tempDir();
+    writePack(dir, {
+      events: [startEvent(), endEvent("error")],
+    });
+    const r = run(["check", dir]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /^outcome=incomplete compliance=compliant suspected_spin=false verdict=/);
+    const v = readFileSync(join(dir, "verdict.md"), "utf8");
+    assert.match(v, /code: incomplete\.goal/);
+    assert.doesNotMatch(v, /incomplete\.truncated/);
+  });
+
   it("overreach.network and capability", async () => {
     const dir = await tempDir();
     writePack(dir, {

@@ -86,6 +86,21 @@ describe("cc-hook D9", () => {
     assert.equal(sc.chainTip, ev[0].hash);
   });
 
+  it("StopFailure writes end error; check is incomplete.goal not truncated", async () => {
+    const pack = await makePack();
+    assert.equal(hook(pack, "SessionStart").status, 0);
+    const sf = hook(pack, "StopFailure");
+    assert.equal(sf.status, 0, sf.stderr);
+    const ev = eventsOf(pack);
+    assert.equal(ev.map((e) => e.kind).join(","), "start,end");
+    assert.equal(ev[1].stop_reason, "error");
+    const check = run(["check", pack]);
+    assert.equal(check.status, 0, check.stderr);
+    const v = readFileSync(join(pack, "verdict.md"), "utf8");
+    assert.match(v, /code: incomplete\.goal/);
+    assert.doesNotMatch(v, /incomplete\.truncated/);
+  });
+
   it("2. missing contract.md → no evidence, exit 1", async () => {
     const pack = await tempDir();
     const r = hook(pack, "SessionStart");
