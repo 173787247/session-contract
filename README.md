@@ -64,15 +64,16 @@ Path matching is lexical only (spec §3.2): the checker never touches the filesy
 dsh is post-hoc (`adapt dsh`). Claude Code writes the same pack **during** the session. `check` is still after the fact; hooks never set `outcome: pass` and never block tools (they never exit 2).
 
 ```bash
-session-contract cc-init --print          # JSON fragment; paste into settings
+session-contract cc-init --print          # core hook fragment; paste into settings
 # or: session-contract cc-init --write project   # ./.claude/settings.json (idempotent)
+# --full adds PermissionDenied; do not use on Claude Code 2.1.87
 
 session-contract cc-run --contract contract.md
 # stderr: pack=<abs path to cwd>/.session-contract/packs/<UTC…Z>-<4hex>
 session-contract check <that-pack>
 ```
 
-`--write user` merges into `~/.claude/settings.json`. `--print` is the default so the tool does not edit your config unless you opt in. Gitignore `.session-contract/` (live packs). A kill mid-session leaves no `end` → `check` writes `incomplete.truncated`. Process contract: `spec/0.1-cc-hooks.md`.
+`--write user` merges into `~/.claude/settings.json`. `--print` is the default so the tool does not edit your config unless you opt in. Default `cc-init` emits the **core** hook set only (a `PermissionDenied` key on Claude Code 2.1.87 zeroes every matcher). Gitignore `.session-contract/` (live packs). A kill mid-session leaves no `end` → `check` writes `incomplete.truncated`. Process contract: `spec/0.1-cc-hooks.md`.
 
 ## Status
 

@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { plantStaleLock } from "../src/cc-lock.js";
 import { mergeSettings, hooksFragment } from "../src/cc-init.js";
+import { CORE_EVENTS, OPTIONAL_EVENTS } from "../src/cc-map.js";
 import { digestBody, resultSha256 } from "../src/cc-map.js";
 import { claudeSpawnOpts, cmdQuote, defaultPackDir, resolveClaudeBin } from "../src/cc-run.js";
 import { healTornNdjson } from "../src/cc-writer.js";
@@ -264,24 +265,34 @@ describe("cc-hook D9", () => {
 });
 
 describe("cc-init", () => {
-  it("9. --print JSON has seven events, shell command with cc-hook <Event>, no Stop", () => {
+  it("9. --print JSON is the core set; command contains cc-hook <Event>; no Stop", () => {
     const r = run(["cc-init", "--print"]);
     assert.equal(r.status, 0, r.stderr);
     const json = JSON.parse(r.stdout);
-    const names = ["SessionStart", "PreToolUse", "PostToolUse", "PostToolUseFailure", "PermissionDenied", "SessionEnd", "StopFailure"];
-    assert.deepEqual(Object.keys(json.hooks).sort(), [...names].sort());
+    assert.deepEqual(Object.keys(json.hooks).sort(), [...CORE_EVENTS].sort());
+    for (const ev of OPTIONAL_EVENTS) assert.equal(json.hooks[ev], undefined);
     assert.equal(json.hooks.Stop, undefined);
-    for (const ev of names) {
+    for (const ev of CORE_EVENTS) {
       const entry = json.hooks[ev][0];
       assert.equal(entry.matcher, "");
       const h = entry.hooks[0];
       assert.equal(h.type, "command");
       assert.equal(h.args, undefined);
       assert.equal(h.shell, undefined);
-      assert.equal(typeof h.command, "string");
       assert.match(h.command, new RegExp(`cc-hook ${ev}$`));
       assert.match(h.command, /^node "/);
       assert.ok(h.command.includes(resolve(bin)));
+    }
+  });
+
+  it("--full print includes optional events", () => {
+    const r = run(["cc-init", "--print", "--full"]);
+    assert.equal(r.status, 0, r.stderr);
+    const json = JSON.parse(r.stdout);
+    const names = [...CORE_EVENTS, ...OPTIONAL_EVENTS];
+    assert.deepEqual(Object.keys(json.hooks).sort(), [...names].sort());
+    for (const ev of names) {
+      assert.match(json.hooks[ev][0].hooks[0].command, new RegExp(`cc-hook ${ev}$`));
     }
   });
 
@@ -312,6 +323,20 @@ describe("cc-init", () => {
     const mergedAgain = mergeSettings(settings, hooksFragment());
     assert.equal(mergedAgain.hooks.PreToolUse.length, 2);
     assert.equal(mergedAgain.hooks.SessionStart.length, 1);
+    assert.equal(mergedAgain.hooks.PermissionDenied, undefined);
+  });
+
+  it("default merge strips our optional PermissionDenied key; --full puts it back", () => {
+    const withFull = mergeSettings({}, hooksFragment(true), true);
+    assert.ok(withFull.hooks.PermissionDenied);
+    const stripped = mergeSettings(withFull, hooksFragment(false), false);
+    assert.equal(stripped.hooks.PermissionDenied, undefined);
+    assert.ok(stripped.hooks.SessionStart);
+    const again = mergeSettings(stripped, hooksFragment(true), true);
+    assert.ok(again.hooks.PermissionDenied);
+    const dup = mergeSettings(again, hooksFragment(true), true);
+    assert.equal(dup.hooks.PermissionDenied.length, 1);
+    assert.equal(dup.hooks.SessionStart.length, 1);
   });
 
   it("merge replaces a legacy args-form cc-hook entry", () => {

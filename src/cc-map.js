@@ -12,6 +12,12 @@ export const CC_EVENTS = [
   "StopFailure",
 ];
 
+/** 2.1.87 intersection: registering these does not zero all matchers. */
+export const CORE_EVENTS = CC_EVENTS.filter((e) => e !== "PermissionDenied");
+
+/** Type-0 poison on 2.1.87: unknown key → every matcher becomes 0. Opt-in via `--full`. */
+export const OPTIONAL_EVENTS = ["PermissionDenied"];
+
 const OMIT = new Set([
   "Task",
   "TodoWrite",

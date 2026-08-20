@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CC_EVENTS } from "./cc-map.js";
+import { CC_EVENTS, CORE_EVENTS, OPTIONAL_EVENTS } from "./cc-map.js";
 import { CliError } from "./errors.js";
 
 export function sessionContractBin() {
@@ -18,11 +18,21 @@ export function hookCommand(bin, eventName) {
   return `node "${bin}" cc-hook ${eventName}`;
 }
 
-export function hooksFragment() {
+/**
+ * @param {boolean} [full]
+ */
+export function emitEvents(full = false) {
+  return full ? CC_EVENTS : CORE_EVENTS;
+}
+
+/**
+ * @param {boolean} [full]
+ */
+export function hooksFragment(full = false) {
   const bin = sessionContractBin();
   /** @type {Record<string, unknown>} */
   const hooks = {};
-  for (const ev of CC_EVENTS) {
+  for (const ev of emitEvents(full)) {
     hooks[ev] = [
       {
         matcher: "",
@@ -56,19 +66,32 @@ function isLegacyArgsOurs(entry, eventName) {
   });
 }
 
+function isOurs(entry, eventName) {
+  return isShellOurs(entry, eventName) || isLegacyArgsOurs(entry, eventName);
+}
+
 /**
  * @param {Record<string, unknown>} existing
  * @param {ReturnType<typeof hooksFragment>} fragment
+ * @param {boolean} [full]
  */
-export function mergeSettings(existing, fragment) {
+export function mergeSettings(existing, fragment, full = false) {
   const out = { ...existing };
   const prevHooks = existing.hooks && typeof existing.hooks === "object" && !Array.isArray(existing.hooks)
     ? /** @type {Record<string, unknown>} */ (existing.hooks)
     : {};
   /** @type {Record<string, unknown>} */
   const hooks = { ...prevHooks };
+  const emit = new Set(emitEvents(full));
   for (const ev of CC_EVENTS) {
     const list = Array.isArray(hooks[ev]) ? [.../** @type {unknown[]} */ (hooks[ev])] : [];
+    if (!full && OPTIONAL_EVENTS.includes(ev)) {
+      const kept = list.filter((entry) => !isOurs(entry, ev));
+      if (kept.length) hooks[ev] = kept;
+      else delete hooks[ev];
+      continue;
+    }
+    if (!emit.has(ev)) continue;
     const upgraded = list.filter((entry) => !isLegacyArgsOurs(entry, ev));
     if (!upgraded.some((entry) => isShellOurs(entry, ev))) {
       upgraded.push(fragment.hooks[ev][0]);
@@ -90,9 +113,10 @@ export function projectSettingsPath(cwd = process.cwd()) {
 /**
  * @param {"print" | "user" | "project"} mode
  * @param {string} [cwd]
+ * @param {boolean} [full]
  */
-export function runCcInit(mode, cwd = process.cwd()) {
-  const fragment = hooksFragment();
+export function runCcInit(mode, cwd = process.cwd(), full = false) {
+  const fragment = hooksFragment(full);
   if (mode === "print") {
     return { json: fragment, path: null };
   }
@@ -112,7 +136,7 @@ export function runCcInit(mode, cwd = process.cwd()) {
     }
     existing = parsed;
   }
-  const merged = mergeSettings(existing, fragment);
+  const merged = mergeSettings(existing, fragment, full);
   writeFileSync(path, `${JSON.stringify(merged, null, 2)}\n`);
   return { json: merged, path };
 }

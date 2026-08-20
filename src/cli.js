@@ -14,7 +14,7 @@ function usage() {
     "  session-contract adapt dsh <zip-or-jsonl> --out <pack> [--contract <file>]",
     "  session-contract cc-hook <Event>",
     "  session-contract cc-run --contract <file> [--pack <dir>] [--] <claude args…>",
-    "  session-contract cc-init [--print] [--write user|project]",
+    "  session-contract cc-init [--print] [--write user|project] [--full]",
   ].join("\n");
 }
 
@@ -97,10 +97,15 @@ function runCcHookCli(argv, stderr, io) {
 function runCcInitCli(argv, stdout) {
   /** @type {"print" | "user" | "project"} */
   let mode = "print";
+  let full = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--print") {
       mode = "print";
+      continue;
+    }
+    if (a === "--full") {
+      full = true;
       continue;
     }
     if (a === "--write") {
@@ -111,7 +116,7 @@ function runCcInitCli(argv, stdout) {
     }
     throw new CliError(2, usage());
   }
-  const result = runCcInit(mode);
+  const result = runCcInit(mode, process.cwd(), full);
   if (mode === "print") {
     stdout.write(`${JSON.stringify(result.json, null, 2)}\n`);
   }
