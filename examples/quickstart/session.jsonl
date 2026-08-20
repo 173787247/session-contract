@@ -1,0 +1,8 @@
+{"type":"session","version":0,"id":"demo-session","createdAt":1759251600000,"cwd":"/tmp/session-contract-demo","delegationDepth":0}
+{"type":"tool/call","seq":1,"time":1759251601000,"data":{"turn":1,"step":1,"callId":"call_demo_1","name":"bash","arguments":"{\"command\":\"echo contract-works\"}"}}
+{"type":"tool/result","seq":2,"time":1759251602000,"data":{"turn":1,"step":1,"message":{"content":[{"type":"tool-result","toolCallId":"call_demo_1","content":[{"type":"text","text":"contract-works\n"}]}],"source":{"kind":"tool","callId":"call_demo_1"}}}}
+{"type":"tool/call","seq":3,"time":1759251603000,"data":{"turn":1,"step":1,"callId":"call_demo_2","name":"write","arguments":"{\"file_path\":\"out.txt\",\"content\":\"ok\"}"}}
+{"type":"tool/result","seq":4,"time":1759251604000,"data":{"turn":1,"step":1,"message":{"content":[{"type":"tool-result","toolCallId":"call_demo_2","content":[{"type":"text","text":"wrote out.txt"}]}],"source":{"kind":"tool","callId":"call_demo_2"}}}}
+{"type":"tool/call","seq":5,"time":1759251605000,"data":{"turn":1,"step":1,"callId":"call_demo_3","name":"web_search","arguments":"{\"query\":\"session contract\"}"}}
+{"type":"tool/result","seq":6,"time":1759251606000,"data":{"turn":1,"step":1,"message":{"content":[{"type":"tool-result","toolCallId":"call_demo_3","content":[{"type":"text","text":"no results"}]}],"source":{"kind":"tool","callId":"call_demo_3"}}}}
+{"type":"turn/end","seq":7,"time":1759251607000,"data":{"turn":1,"reason":{"kind":"completed"}}}

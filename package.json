@@ -15,5 +15,13 @@
   "dependencies": {
     "yaml": "^2.8.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "bin",
+    "src",
+    "spec",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ]
 }
