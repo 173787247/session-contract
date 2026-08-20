@@ -59,9 +59,24 @@ session-contract check /tmp/pack-demo
 
 Path matching is lexical only (spec §3.2): the checker never touches the filesystem, so `/tmp/...` roots work on Windows too.
 
+## Claude Code (live)
+
+dsh is post-hoc (`adapt dsh`). Claude Code writes the same pack **during** the session. `check` is still after the fact; hooks never set `outcome: pass` and never block tools (they never exit 2).
+
+```bash
+session-contract cc-init --print          # JSON fragment; paste into settings
+# or: session-contract cc-init --write project   # ./.claude/settings.json (idempotent)
+
+session-contract cc-run --contract contract.md
+# stderr: pack=<abs path to cwd>/.session-contract/packs/<UTC…Z>-<4hex>
+session-contract check <that-pack>
+```
+
+`--write user` merges into `~/.claude/settings.json`. `--print` is the default so the tool does not edit your config unless you opt in. Gitignore `.session-contract/` (live packs). A kill mid-session leaves no `end` → `check` writes `incomplete.truncated`. Process contract: `spec/0.1-cc-hooks.md`.
+
 ## Status
 
-Spec **0.1** (`spec/0.1.md`). Adapter input: `spec/0.1-adapter.md`. CLI: `spec/0.1-cli.md`.
+Spec **0.1** (`spec/0.1.md`). Adapter: `spec/0.1-adapter.md`. CLI: `spec/0.1-cli.md`. Claude Code live writer: `spec/0.1-cc-hooks.md`.
 
 ## Not this project
 
