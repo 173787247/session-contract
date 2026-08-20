@@ -27,7 +27,12 @@ Effective verdict: missing `accept` = unpublished; `accept: false` = rejected; `
 
 ## Status
 
-Spec **0.1** (`spec/0.1.md`). Adapter input draft: `spec/0.1-adapter.md`. No checker CLI yet.
+Spec **0.1** (`spec/0.1.md`). Adapter input: `spec/0.1-adapter.md`. CLI: `spec/0.1-cli.md`.
+
+```text
+node bin/session-contract.js check <pack>
+node bin/session-contract.js adapt dsh <zip-or-jsonl> --out <pack> [--contract contract.md]
+```
 
 ## Not this project
 

@@ -1,0 +1,19 @@
+{
+  "name": "session-contract",
+  "version": "0.1.0",
+  "description": "Portable acceptance for one human-agent session: machine-checkable contract, generated evidence, two-axis verdict claim.",
+  "type": "module",
+  "bin": {
+    "session-contract": "./bin/session-contract.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.15"
+  },
+  "dependencies": {
+    "yaml": "^2.8.0"
+  },
+  "license": "MIT"
+}
