@@ -1,6 +1,8 @@
-# session-contract
+# Session Contract
 
-Portable **acceptance** for one human–agent session: a machine-checkable contract, a generated evidence log, and a two-axis verdict **claim**. Runtimes adapt to this spec; the spec does not embed a runtime.
+Portable acceptance for one human–agent session: machine-checkable contract, generated evidence, two-axis verdict claim.
+
+Slug: `session-contract`. Runtimes adapt to this spec; the spec does not embed a runtime. Do not abbreviate as SCP.
 
 AHP ([Agent Handoff Protocol](https://github.com/DeepJudge-Agent-Handoff-Protocol/agenthandoffprotocol)) moves work between agent apps. This spec **accepts or rejects a finished session**. It does not define HTTP handoff, Thread IDs, or encrypted A2A receipts.
 
