@@ -27,7 +27,7 @@ Effective verdict: missing `accept` = unpublished; `accept: false` = rejected; `
 
 ## Status
 
-Spec **0.1** (`spec/0.1.md`). No checker yet. Next review: adapter input (dsh export, Claude Code hooks). Implementations must stay post-hoc; see [Claude Code Stop hook false negatives](https://github.com/anthropics/claude-code/issues/29881).
+Spec **0.1** (`spec/0.1.md`). Adapter input draft: `spec/0.1-adapter.md`. No checker CLI yet.
 
 ## Not this project
 
